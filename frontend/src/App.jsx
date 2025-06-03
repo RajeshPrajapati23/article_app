@@ -10,6 +10,7 @@ import { getToken } from "./common/helper";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
 import "./App.css";
+import ViewEditHistory from "./pages/viewEditHistory";
 function ProtectedRoute({ children }) {
   return getToken() ? children : <Navigate to="/login" />;
 }
@@ -22,40 +23,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
-        {/* <Route path="/" element={<Navigate to="/articles" />} />
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/articles"
-          element={
-            <ProtectedRoute>
-              <Articles />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/articles/new"
-          element={
-            <ProtectedRoute>
-              <NewArticle />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/articles/:id"
-          element={
-            <ProtectedRoute>
-              <ArticleDetail />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/articles/:id/edit"
-          element={
-            <ProtectedRoute>
-              <EditArticle />
-            </ProtectedRoute>
-          }
-        /> */}
+        <Route path="/viewedithistory/:id" element={<ViewEditHistory />} />
       </Routes>
     </BrowserRouter>
   );

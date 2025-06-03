@@ -29,6 +29,7 @@ export const createArticle = async (req, res) => {
     });
   }
 };
+
 export const getByIdArticle = async (req, res) => {
   // Basic input validation
   const { id } = req.params;
@@ -45,20 +46,10 @@ export const getByIdArticle = async (req, res) => {
   }
 
   try {
-    // const result = await pool.query(
-    //   `SELECT *, u.id AS author_id
-    //      FROM tbl_articles a
-    //      JOIN tbl_users u ON a.created_by = u.id
-    //      WHERE a.id = $1`,
-    //   [id]
-    // );
     const result = await pool.query(
       `SELECT * FROM tbl_articles WHERE id = $1`,
       [id]
     );
-
-    console.log("resul up", result.rows[0]);
-    console.log("resul au", result.rows[0]);
 
     if (result.rows[0]?.created_by != user.id && user.role === "user") {
       return res.status(401).json({
@@ -89,7 +80,6 @@ export const geteArticle = async (req, res) => {
    FROM tbl_articles a 
    JOIN tbl_users u ON a.created_by = u.id`
     );
-    console.log("result get all", result.rows);
 
     return res.status(200).json({
       succ: true,
@@ -117,32 +107,28 @@ export const updateArticleByid = async (req, res) => {
     });
   }
   const user = req.user;
-  const result = await pool.query(
-    `SELECT *, u.id AS author_id 
-       FROM tbl_articles a
-       JOIN tbl_users u ON a.created_by = u.id 
-       WHERE a.id = $1`,
-    [id]
-  );
+  const result = (
+    await pool.query(`SELECT * FROM tbl_articles WHERE id = $1`, [id])
+  ).rows[0];
 
-  console.log("resul", result.rows[0]);
+  console.log("resul", result);
 
-  if (result.rows[0]?.author_id != user.id && user.role === "user") {
+  if (result?.created_by != user.id && user.role === "user") {
     return res.status(401).json({
       succ: false,
       msg: "Permission denied.",
     });
   }
 
-  // // Save current to revisions
-  // await pool.query(
-  //   `INSERT INTO revisions (article_id, content) VALUES ($1, $2)`,
-  //   [id, article.content]
-  // );
-
   const updated = await pool.query(
     `UPDATE tbl_articles SET title = $1, content = $2, tags = $3 WHERE id = $4 RETURNING *`,
     [title, content, tags, id]
+  );
+  // edit history
+  await pool.query(
+    `INSERT INTO tbl_edit_history (title, content, tags, created_by, article_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [result.title, result.content, result.tags, user.id, result.id]
   );
   return res.status(200).json({
     succ: true,
@@ -186,6 +172,45 @@ export const deleteArticleById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating article:", error);
+    return res.status(500).json({
+      succ: false,
+      msg: "Server error.",
+    });
+  }
+};
+
+export const geteAllArticleHistory = async (req, res) => {
+  // Basic input validation
+  let { id } = req.params;
+  if (!id) {
+    return res.status(401).json({
+      succ: false,
+      msg: "Id is missing.",
+    });
+  }
+  try {
+    const article = (
+      await pool.query(`SELECT * FROM tbl_articles where id = $1`, [id])
+    ).rows[0];
+    if (article?.created_by != req.user.id && req.user.role === "user") {
+      return res.status(401).json({
+        succ: false,
+        msg: "Permission denied.",
+      });
+    }
+
+    let all = await pool.query(
+      `SELECT * FROM tbl_edit_history where article_id = $1`,
+      [id]
+    );
+
+    return res.status(200).json({
+      succ: true,
+      msg: "successfully.",
+      data: all.rows,
+    });
+  } catch (error) {
+    console.error("Error:", error);
     return res.status(500).json({
       succ: false,
       msg: "Server error.",

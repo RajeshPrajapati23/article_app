@@ -11,12 +11,14 @@ export default function Home() {
   const [showModal, setShowModal] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const navigator = useNavigate();
-  let api = import.meta.env.VITE_API;
-  let headers = {
+  const api = import.meta.env.VITE_API;
+
+  const headers = {
     headers: {
       Authorization: "Bearer " + getToken(),
     },
   };
+
   const [typeAddEdit, setTypeAddEdit] = useState("");
   const [targetId, setTargetId] = useState("");
   const [newArticle, setNewArticle] = useState({
@@ -29,24 +31,21 @@ export default function Home() {
   const fetchArticles = async () => {
     try {
       const res = await axios.get(api + "/api/get/article", headers);
-      console.log("res", res);
-
       setArticles(res.data.data || []);
     } catch (err) {
       setError(err.response?.data?.msg || "Failed to fetch articles");
     }
   };
+
   const fetchArticlesById = async (id) => {
     try {
       const res = await axios.get(api + "/api/get/article/" + id, headers);
-      console.log("res", res);
-
       setNewArticle(res.data.data || []);
       setTargetId(id);
       setShowModal(true);
     } catch (err) {
       toast.error(err.response?.data?.msg);
-      setError(err.response?.data?.msg || "Failed to fetch articles");
+      setError(err.response?.data?.msg || "Failed to fetch article");
     }
   };
 
@@ -61,14 +60,15 @@ export default function Home() {
   const handleShowViewMdl = ({ e, id }) => {
     e.preventDefault();
     setViewModal(true);
-    let data = articles.filter((val) => (val.id = id));
-    console.log("data", data);
-
-    setNewArticle(data[0]);
+    let data = articles.filter((val) => val.id === id);
+    if (data.length > 0) {
+      setNewArticle(data[0]);
+    }
   };
+
   const handleShow = ({ type, id }) => {
     setTypeAddEdit(type);
-    if (type == "add") {
+    if (type === "add") {
       setNewArticle({ title: "", content: "", tags: "" });
       setFormErrors({});
       setShowModal(true);
@@ -93,56 +93,52 @@ export default function Home() {
     return errors;
   };
 
-  const onUpdate = async () => {
+  const onUpdate = async (e) => {
+    e.preventDefault();
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    console.log("newArticle", newArticle);
 
     try {
-      let res = await axios.post(
+      const res = await axios.post(
         api + "/api/update/article",
         {
           id: targetId,
           ...newArticle,
           tags: String(newArticle.tags)
-            ?.split(",")
+            .split(",")
             .map((t) => t.trim()),
         },
         headers
       );
 
-      console.log("res", res);
       if (res?.data?.succ) {
         toast.success(res?.data?.msg);
         fetchArticles();
       }
       handleClose();
     } catch (err) {
-      console.log(err);
-      console.error(err);
-
       toast.error(err.response?.data?.msg || "Failed to update article");
     }
   };
-  let DelArticlesById = async (id) => {
+
+  const DelArticlesById = async (id) => {
     try {
       const res = await axios.delete(
         api + "/api/delete/article/" + id,
         headers
       );
-      console.log("res", res);
       if (res.data.succ) {
         toast.success(res.data.msg);
         fetchArticles();
       }
     } catch (err) {
-      toast.error(err.response?.data?.msg);
-      setError(err.response?.data?.msg || "Failed to fetch articles");
+      toast.error(err.response?.data?.msg || "Failed to delete article");
     }
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = validateForm();
@@ -152,7 +148,7 @@ export default function Home() {
     }
 
     try {
-      let res = await axios.post(
+      const res = await axios.post(
         api + "/api/add/article",
         {
           ...newArticle,
@@ -161,7 +157,6 @@ export default function Home() {
         headers
       );
 
-      console.log("res", res);
       if (res?.data?.succ) {
         toast.success(res?.data?.msg);
         fetchArticles();
@@ -192,7 +187,6 @@ export default function Home() {
               <div className="card h-100 shadow-sm border-danger border-1">
                 <div className="card-body d-flex flex-column">
                   <h5 className="card-title text-danger">{article.title}</h5>
-                  <p className="text-muted small mb-1"></p>
                   <p className="card-text text-truncate">
                     {article.content.length > 100
                       ? article.content.slice(0, 100) + "..."
@@ -210,7 +204,7 @@ export default function Home() {
                     </Link>
                     <Link
                       onClick={() =>
-                        handleShow({ id: article.id, type: "Edit" })
+                        handleShow({ id: article.id, type: "edit" })
                       }
                       className="btn btn-outline-secondary btn-sm"
                     >
@@ -224,8 +218,23 @@ export default function Home() {
                     </Link>
                   </div>
                 </div>
-                <div className="card-footer text-end text-muted small">
-                  {new Date(article.created_at).toLocaleDateString()}
+                <div className="d-flex justify-content-between">
+                  <Link
+                    to={`/viewedithistory/${article.id}`}
+                    className="w-50 border-0 bg-danger text-center text-white"
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    View History
+                  </Link>
+                  <div className="w-50 card-footer text-end text-muted small">
+                    {article.created_at
+                      ? new Date(article.created_at).toLocaleDateString()
+                      : "N/A"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -233,7 +242,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ➕ Add Article Modal */}
+      {/* Add/Edit Modal */}
       <Modal show={showModal} onHide={handleClose} backdrop="static">
         <Modal.Header closeButton className="bg-danger text-white">
           <Modal.Title>
@@ -293,6 +302,7 @@ export default function Home() {
         </Modal.Body>
       </Modal>
 
+      {/* View Modal */}
       <Modal show={viewModal} onHide={handleCloseView} backdrop="static">
         <Modal.Header closeButton className="bg-danger text-white">
           <Modal.Title>View Details</Modal.Title>
@@ -301,54 +311,31 @@ export default function Home() {
           <Form>
             <Form.Group className="mb-3">
               <Form.Label>Title</Form.Label>
-              <Form.Control
-                type="text"
-                name="title"
-                value={newArticle.title}
-                onChange={handleChange}
-                isInvalid={!!formErrors.title}
-                disabled
-              />
-              <Form.Control.Feedback type="invalid">
-                {formErrors.title}
-              </Form.Control.Feedback>
+              <Form.Control type="text" value={newArticle.title} disabled />
             </Form.Group>
 
             <Form.Group className="mb-3">
               <Form.Label>Content</Form.Label>
               <Form.Control
                 as="textarea"
-                name="content"
                 value={newArticle.content}
-                onChange={handleChange}
                 rows={4}
-                isInvalid={!!formErrors.content}
                 disabled
               />
-              <Form.Control.Feedback type="invalid">
-                {formErrors.content}
-              </Form.Control.Feedback>
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Tags (comma-separated)</Form.Label>
+              <Form.Label>Tags</Form.Label>
               <Form.Control
                 type="text"
-                name="tags"
-                value={newArticle.tags}
-                onChange={handleChange}
+                value={
+                  Array.isArray(newArticle.tags)
+                    ? newArticle.tags.join(", ")
+                    : newArticle.tags
+                }
                 disabled
               />
             </Form.Group>
-
-            {/* <div className="d-flex justify-content-end">
-              <Button variant="secondary me-2" onClick={handleClose}>
-                Cancel
-              </Button>
-              <Button variant="danger" type="submit">
-                Save Article
-              </Button>
-            </div> */}
           </Form>
         </Modal.Body>
       </Modal>
