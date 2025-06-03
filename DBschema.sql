@@ -16,6 +16,15 @@ CREATE TABLE tbl_articles (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+create TABLE tbl_edit_history (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  tags TEXT[],
+  created_by INTEGER REFERENCES tbl_users(id),
+  article_id INTEGER REFERENCES tbl_articles(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
 
 -- SELECT * from tbl_users
 
